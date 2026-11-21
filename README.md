@@ -12,15 +12,20 @@
 
 - [English](./README-EN.md)
 
-镜像提供三个变体，由 GitHub Actions 使用 buildx 构建多架构 manifest：`linux/amd64`、`linux/arm64`，`lite` 额外支持 `linux/arm/v7`。源码取自安全加固后的分支 `fichenx/leanote` 的 `2.6.1-hardened` tag（默认密钥校验、Cookie 加固、导出 PDF 签名校验、API 越权修复等），构建阶段用 Go 1.15 交叉编译，ARM 上不依赖 QEMU 模拟。
+镜像提供三个变体，由 GitHub Actions 使用 buildx 构建多架构 manifest：`linux/amd64`、`linux/arm64`，`lite` 额外支持 `linux/arm/v7`，构建阶段用 Go 1.15 交叉编译，ARM 上不依赖 QEMU 模拟。
 
 **注意：本仓库的镜像名是 `fichenx/leanote`，不是 axboy/leanote。**
 
-## 版本选择
+## 版本与标签
 
-- full: 完整功能，内置数据库 → `fichenx/leanote:full`、`fichenx/leanote:latest`、`fichenx/leanote:2.6.1-full`
-- nodb: 完整功能，不包含数据库 → `fichenx/leanote:nodb`、`fichenx/leanote:2.6.1-nodb`
-- lite: 仅有leanote程序，网页版不支持导出pdf和备份数据库，供客户端用户使用 → `fichenx/leanote:lite`、`fichenx/leanote:2.6.1-lite`
+- 稳定版：保持上游 `leanote/leanote` 2.6.1 原样，标签 `<变体>`、`2.6.1-<变体>`，`latest` 指向 full。
+- 修复版：跟随 GitHub Release 版本号打标签，源码取自 `fichenx/leanote` 同名 tag（默认密钥校验、Cookie 加固、导出 PDF 签名校验、API 越权修复、文档导航修复等）。
+
+| 变体 | 稳定版标签 | 修复版标签（以 2.6.1-hardened 为例） |
+| --- | --- | --- |
+| full | `full`、`latest`、`2.6.1-full` | `2.6.1-hardened`、`2.6.1-hardened-full` |
+| nodb | `nodb`、`2.6.1-nodb` | `2.6.1-hardened-nodb` |
+| lite | `lite`、`2.6.1-lite` | `2.6.1-hardened-lite` |
 
 | 变体 | 数据库 | PDF 导出 | 数据库备份 | 架构 |
 | --- | --- | --- | --- | --- |
@@ -36,6 +41,9 @@ docker run -d --name leanote -p 9000:9000 -v leanote-data:/data fichenx/leanote:
 
 # nodb / lite：数据目录挂出来，首次启动后按需改 conf/app.conf 里的 db.host
 docker run -d --name leanote -p 9000:9000 -v $PWD/leanote-data:/data/leanote fichenx/leanote:nodb
+
+# 修复版（安全加固 + 文档导航修复），标签跟随 GitHub Release 版本号
+docker run -d --name leanote -p 9000:9000 -v leanote-data:/data fichenx/leanote:2.6.1-hardened
 ```
 
 默认管理员 `admin / abc123`，登录后请立即修改密码。首次启动会自动生成随机 `app.secret`（长度 72），不要把它改回默认值，否则启用了启动校验的 Leanote 构建会拒绝启动。

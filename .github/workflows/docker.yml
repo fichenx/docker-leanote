@@ -7,12 +7,19 @@ on:
   pull_request:
     branches: [master, main]
   workflow_dispatch:
+    inputs:
+      version:
+        description: '跟随 leanote Release 的版本号（如 2.6.1-hardened）'
+        required: false
+        default: '2.6.1-hardened'
 
 permissions:
   contents: read
 
 env:
   IMAGE: fichenx/leanote
+  # 版本号跟随 GitHub Release；手动触发时可覆盖
+  LEANOTE_VERSION: ${{ github.event.inputs.version || '2.6.1-hardened' }}
 
 jobs:
   build:
@@ -57,9 +64,8 @@ jobs:
           flavor: |
             latest=false
           tags: |
-            type=raw,value=${{ matrix.variant.name }}
-            type=raw,value=2.6.1-${{ matrix.variant.name }}
-            type=raw,value=latest,enable=${{ matrix.variant.name == 'full' }}
+            type=raw,value=${{ env.LEANOTE_VERSION }},enable=${{ matrix.variant.name == 'full' }}
+            type=raw,value=${{ env.LEANOTE_VERSION }}-${{ matrix.variant.name }}
 
       - name: Build and push
         uses: docker/build-push-action@v5
@@ -67,7 +73,9 @@ jobs:
           context: .
           file: ${{ matrix.variant.dockerfile }}
           platforms: ${{ matrix.variant.platforms }}
-          push: ${{ env.DOCKERHUB_USERNAME != '' }}
+          build-args: |
+            LEANOTE_VERSION=${{ env.LEANOTE_VERSION }}
+          push: ${{ env.DOCKERHUB_USERNAME != '' && github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.variant.name }}
