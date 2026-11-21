@@ -103,6 +103,17 @@ ln -s /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 echo "Asia/Shanghai" > /etc/timezone
 ```
 
+## 安全说明（本仓库加固内容）
+
+- 容器只暴露 9000，MongoDB 由 `run.sh` 以 `--bind_ip 127.0.0.1` 启动，**不再**对外暴露 27017；
+  即使误加 `-p 27017:27017` 也无法从容器外直连数据库。
+- 首次启动自动生成随机 `app.secret`（整行替换，不再依赖 grep 的输出），并声明了
+  `/data/db`、`/data/leanote/conf`、`/data/leanote/files`、`/data/leanote/public/upload` 数据卷。
+- 初始化使用 `set -euo pipefail`，会等待 MongoDB `ping` 成功后再恢复数据，恢复成功才写完成标记；
+  升级时只补齐缺失文件，不再覆盖已有的 conf/files/upload。
+- 构建时可通过 `--build-arg LEANOTE_SHA256=<sha256>` 校验 Leanote 安装包（上游只提供 http 源）。
+- 已内置 `HEALTHCHECK`，`CMD` 使用 exec 形式，Leanote 作为 PID 1 可正常接收退出信号。
+
 ## [常见问题](https://github.com/leanote/leanote/wiki/QA)
 
 - 2.6版启动后不能访问

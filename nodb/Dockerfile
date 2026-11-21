@@ -5,6 +5,11 @@ FROM alpine:3.12
 MAINTAINER zcw
 ENV TZ=Asia/Shanghai
 
+# 可用 --build-arg LEANOTE_SHA256=<sha256> 校验安装包完整性
+ARG LEANOTE_VERSION=2.6.1
+ARG LEANOTE_URL=http://static.axboy.cn/leanote/leanote-linux-amd64-v${LEANOTE_VERSION}.bin.tar.gz
+ARG LEANOTE_SHA256=
+
 COPY --from=builder /bin/wkhtmltopdf /usr/local/bin/wkhtmltopdf
 COPY --from=fontBuilder /usr/share/fonts/truetype /usr/share/fonts/truetype
 
@@ -13,11 +18,15 @@ RUN apk update && apk add --no-cache tzdata mongodb-tools \
     ttf-dejavu ttf-droid ttf-freefont ttf-liberation ttf-ubuntu-font-family && \
     cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
     mkdir /data/ && \
-    wget http://static.axboy.cn/leanote/leanote-linux-amd64-v2.6.1.bin.tar.gz -O /root/leanote.tar.gz && \
+    wget "$LEANOTE_URL" -O /root/leanote.tar.gz && \
+    if [ -n "$LEANOTE_SHA256" ]; then echo "$LEANOTE_SHA256  /root/leanote.tar.gz" | sha256sum -c -; fi && \
     tar -xzf /root/leanote.tar.gz -C /data/ && \
     chmod +x /data/leanote/bin/run.sh && \
     chmod +x /usr/local/bin/wkhtmltopdf && \
     rm -f /root/leanote.tar.gz
 
 EXPOSE 9000
-CMD sh /data/leanote/bin/run.sh
+VOLUME ["/data/leanote/conf", "/data/leanote/files", "/data/leanote/public/upload"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD wget -q -O /dev/null --timeout=5 http://127.0.0.1:9000/login || exit 1
+CMD ["/data/leanote/bin/run.sh"]

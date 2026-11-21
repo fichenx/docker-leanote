@@ -2,11 +2,19 @@ FROM mongo:4.2.7-bionic
 MAINTAINER zcw
 ENV TZ=Asia/Shanghai
 
+# 安全加固说明：
+# 1. 只暴露应用端口，mongod 由 run.sh 绑定到 127.0.0.1，不再对外暴露 27017
+# 2. 下载 Leanote 安装包时可用 --build-arg LEANOTE_SHA256=<sha256> 校验完整性
+# 3. 声明数据卷，配合 HEALTHCHECK 判断服务是否真正可用
+ARG LEANOTE_VERSION=2.6.1
+ARG LEANOTE_URL=http://static.axboy.cn/leanote/leanote-linux-amd64-v${LEANOTE_VERSION}.bin.tar.gz
+ARG LEANOTE_SHA256=
+
 ADD run.sh /root/
 RUN set -ex; \
     apt-get update; \
-    apt-get install -y --no-install-recommends wget tar vim libssl1.0-dev; \
-
+    apt-get install -y --no-install-recommends wget tar vim ca-certificates; \
+    \
     # install font
     apt-get install -y xvfb libXrender* libfontconfig*; \
     apt-get install -y \
@@ -20,16 +28,21 @@ RUN set -ex; \
         ttf-wqy-microhei \
         xfonts-wqy; \
     rm -rf /var/lib/apt/lists/*; \
-
+    \
     # download wkhtmltopdf
-    wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.4/wkhtmltox-0.12.4_linux-generic-amd64.tar.xz; \
+    wget -q https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.4/wkhtmltox-0.12.4_linux-generic-amd64.tar.xz; \
     tar -xvf wkhtmltox-0.12.4_linux-generic-amd64.tar.xz; \
     cp wkhtmltox/bin/wkhtmltopdf /usr/local/bin/wkhtmltopdf; \
     chmod +x /usr/local/bin/wkhtmltopdf; \
     rm -rf wkhtmltox wkhtmltox-0.12.4_linux-generic-amd64.tar.xz ;\
-
-    #download leanote
-    wget http://static.axboy.cn/leanote/leanote-linux-amd64-v2.6.1.bin.tar.gz -O /root/leanote.tar.gz; \
+    \
+    #download leanote (上游仅提供 http 源, 建议通过 LEANOTE_SHA256 传入校验值)
+    wget "$LEANOTE_URL" -O /root/leanote.tar.gz; \
+    if [ -n "$LEANOTE_SHA256" ]; then \
+        echo "$LEANOTE_SHA256  /root/leanote.tar.gz" | sha256sum -c -; \
+    else \
+        echo "WARNING: 未校验 Leanote 安装包, 建议构建时传入 --build-arg LEANOTE_SHA256=<sha256>"; \
+    fi; \
     tar -xzf /root/leanote.tar.gz -C /root/ ;\
     rm -f /root/leanote.tar.gz ;\
     chmod a+x /root/run.sh ;\
@@ -38,6 +51,13 @@ RUN set -ex; \
     ln -snf /usr/share/zoneinfo/$TZ /etc/localtime ;\
     echo $TZ > /etc/timezone
 
-EXPOSE 9000 27017
-# CMD ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && /bin/bash /root/run.sh
-CMD /bin/bash /root/run.sh
+# 只对应用端口开放, 数据库仅监听容器内回环地址
+EXPOSE 9000
+
+VOLUME ["/data/db", "/data/leanote/conf", "/data/leanote/files", "/data/leanote/public/upload"]
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
+    CMD wget -q -O /dev/null --timeout=5 http://127.0.0.1:9000/login || exit 1
+
+# exec 形式, 让 run.sh 中的 exec 能把 Leanote 作为 PID 1 接管信号
+CMD ["/bin/bash", "/root/run.sh"]
