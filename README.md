@@ -12,31 +12,35 @@
 
 - [English](./README-EN.md)
 
-镜像提供内置数据库和无数据库版，内置数据库基于mongo:4.2构建，蚂蚁笔记所需数据都已初始化完毕，非内置数据库启动后需修改数据配置再重启。
+镜像提供三个变体，由 GitHub Actions 使用 buildx 构建多架构 manifest：`linux/amd64`、`linux/arm64`，`lite` 额外支持 `linux/arm/v7`。Leanote 2.6.1 在构建阶段用 Go 1.15 交叉编译，ARM 上不依赖 QEMU 模拟。
 
-_内置数据库，容器内多进程非Docker推荐做法，只为方便。_
-
-**有问题加QQ 1123300322，回复会更及时些，提issue不知道要什么时候才看。**
+**注意：本仓库的镜像名是 `fichenx/leanote`，不是 axboy/leanote。**
 
 ## 版本选择
 
-full: 完整功能，内置数据库
+- full: 完整功能，内置数据库 → `fichenx/leanote:full`、`fichenx/leanote:latest`、`fichenx/leanote:2.6.1-full`
+- nodb: 完整功能，不包含数据库 → `fichenx/leanote:nodb`、`fichenx/leanote:2.6.1-nodb`
+- lite: 仅有leanote程序，网页版不支持导出pdf和备份数据库，供客户端用户使用 → `fichenx/leanote:lite`、`fichenx/leanote:2.6.1-lite`
 
-nodb: 完整功能，不包含数据库
+| 变体 | 数据库 | PDF 导出 | 数据库备份 | 架构 |
+| --- | --- | --- | --- | --- |
+| full | 内置 MongoDB 4.2 | ✅ | ✅ | amd64 / arm64 |
+| nodb | 需外接 | ✅ | ✅（需能连到 mongodump 可用环境） | amd64 / arm64 |
+| lite | 需外接 | ❌ | ❌ | amd64 / arm64 / armv7 |
 
-lite: 仅有leanote程序，网页版不支持导出pdf和备份数据库，供客户端用户使用
+## 快速开始
 
-具体如下
+```bash
+# full：一条命令跑起来，数据在 leanote-data 卷里
+docker run -d --name leanote -p 9000:9000 -v leanote-data:/data fichenx/leanote:full
 
-- latest([Dockerfile](https://github.com/axboy/docker-leanote/blob/master/Dockerfile))
-- nodb([Dockerfile](https://github.com/axboy/leanote/blob/master/nodb/Dockerfile))
-- lite([Dockerfile](https://github.com/axboy/leanote/blob/master/lite/Dockerfile))
-- lite-arm([Dockerfile](https://github.com/axboy/leanote/blob/master/lite/Dockerfile-arm))
-- ~~2.5([Dockerfile](https://github.com/axboy/leanote/blob/2.5/Dockerfile))~~
-- ~~2.6([Dockerfile](https://github.com/axboy/leanote/blob/2.6/Dockerfile))~~
-- ~~2.6.1([Dockerfile](https://github.com/axboy/leanote/blob/2.6.1/Dockerfile))~~
+# nodb / lite：数据目录挂出来，首次启动后按需改 conf/app.conf 里的 db.host
+docker run -d --name leanote -p 9000:9000 -v $PWD/leanote-data:/data/leanote fichenx/leanote:nodb
+```
 
-## 数据库配置(nodb版使用)
+默认管理员 `admin / abc123`，登录后请立即修改密码。首次启动会自动生成随机 `app.secret`（长度 72），不要把它改回默认值，否则启用了启动校验的 Leanote 构建会拒绝启动。
+
+## 数据库配置(nodb/lite版使用)
 
 [初始化数据库看这里](https://github.com/leanote/leanote/wiki/Leanote-二进制版详细安装教程----Mac-and-Linux#3-导入初始数据)
 
@@ -75,8 +79,10 @@ docker run -d --name leanote \
     -v `pwd`/files:/data/leanote/files \
     -v `pwd`/upload:/data/leanote/public/upload \
     -p 9000:9000 \
-    axboy/leanote
+    fichenx/leanote:full
 ```
+
+`nodb` / `lite` 没有内置数据库，只挂载 `/data/leanote` 下的 conf/files/upload 即可。
 
 ## 备份数据
 
@@ -102,6 +108,17 @@ docker run -d --name leanote \
 ln -s /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 echo "Asia/Shanghai" > /etc/timezone
 ```
+
+## 安全说明（本仓库加固内容）
+
+- 容器只暴露 9000，MongoDB 由 `run.sh` 以 `--bind_ip 127.0.0.1` 启动，**不再**对外暴露 27017；
+  即使误加 `-p 27017:27017` 也无法从容器外直连数据库。
+- 首次启动自动生成随机 `app.secret`（整行替换，不再依赖 grep 的输出），并声明了
+  `/data/db`、`/data/leanote/conf`、`/data/leanote/files`、`/data/leanote/public/upload` 数据卷。
+- 初始化使用 `set -euo pipefail`，会等待 MongoDB `ping` 成功后再恢复数据，恢复成功才写完成标记；
+  升级时只补齐缺失文件，不再覆盖已有的 conf/files/upload。
+- 构建时可通过 `--build-arg LEANOTE_SHA256=<sha256>` 校验 Leanote 安装包（上游只提供 http 源）。
+- 已内置 `HEALTHCHECK`，`CMD` 使用 exec 形式，Leanote 作为 PID 1 可正常接收退出信号。
 
 ## [常见问题](https://github.com/leanote/leanote/wiki/QA)
 
