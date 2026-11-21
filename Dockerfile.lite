@@ -7,18 +7,19 @@ FROM --platform=$BUILDPLATFORM golang:1.15-buster AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG TARGETVARIANT
-ARG LEANOTE_VERSION=2.6.1
-ENV GO111MODULE=off \
+ARG LEANOTE_VERSION=2.6.1-hardened
+ENV GO111MODULE=on \
+    GOFLAGS=-mod=mod \
     CGO_ENABLED=0 \
-    GOPATH=/go
+    GOPROXY=https://goproxy.cn,https://proxy.golang.org,direct
 
-RUN git clone --depth 1 --branch ${LEANOTE_VERSION} https://github.com/leanote/leanote.git /go/src/github.com/leanote/leanote
-WORKDIR /go/src/github.com/leanote/leanote
-RUN sed -i 's#"github.com/revel/cmd/harness"#"github.com/leanote/leanote/cmd/harness"#' app/cmd/main.go
-RUN go build -o /usr/local/bin/leanote-gen github.com/leanote/leanote/app/cmd
+RUN git clone --depth 1 --branch ${LEANOTE_VERSION} https://github.com/fichenx/leanote.git /src
+WORKDIR /src
+RUN go mod download
+RUN cd app/cmd && go build -o /usr/local/bin/leanote-gen . && leanote-gen build -v ../../ ./tmptmp && rm -rf ./tmptmp
 RUN mkdir -p /out && \
-    GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT#v} leanote-gen && \
-    cp /go/bin/revel.d/github.com/leanote/leanote/leanote /out/leanote
+    GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT#v} \
+    go build -trimpath -ldflags "-s -w" -o /out/leanote ./app/tmp
 
 FROM debian:bookworm-slim
 
@@ -34,10 +35,10 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /out/leanote /opt/leanote/bin/leanote
-COPY --from=builder /go/src/github.com/leanote/leanote/app/views /opt/leanote/app/views
-COPY --from=builder /go/src/github.com/leanote/leanote/public /opt/leanote/public
-COPY --from=builder /go/src/github.com/leanote/leanote/conf /opt/leanote/conf
-COPY --from=builder /go/src/github.com/leanote/leanote/messages /opt/leanote/messages
+COPY --from=builder /src/app/views /opt/leanote/app/views
+COPY --from=builder /src/public /opt/leanote/public
+COPY --from=builder /src/conf /opt/leanote/conf
+COPY --from=builder /src/messages /opt/leanote/messages
 COPY start.sh /usr/local/bin/start.sh
 COPY run-lite.sh /usr/local/bin/run.sh
 RUN chmod +x /usr/local/bin/run.sh /usr/local/bin/start.sh

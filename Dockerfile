@@ -8,22 +8,21 @@ FROM --platform=$BUILDPLATFORM golang:1.15-buster AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG TARGETVARIANT
-ARG LEANOTE_VERSION=2.6.1
-# Leanote 2.6.1 是 GOPATH + vendor 布局，没有 go.mod
-ENV GO111MODULE=off \
+ARG LEANOTE_VERSION=2.6.1-hardened
+# 使用修复后的分支（安全加固），模块模式构建
+ENV GO111MODULE=on \
+    GOFLAGS=-mod=mod \
     CGO_ENABLED=0 \
-    GOPATH=/go
+    GOPROXY=https://goproxy.cn,https://proxy.golang.org,direct
 
-RUN git clone --depth 1 --branch ${LEANOTE_VERSION} https://github.com/leanote/leanote.git /go/src/github.com/leanote/leanote
-WORKDIR /go/src/github.com/leanote/leanote
-# app/cmd 默认引用 vendor 中未修正的 revel harness，会生成带 vendor/ 前缀的 import；
-# 改用仓库内已修正路径处理的 cmd/harness
-RUN sed -i 's#"github.com/revel/cmd/harness"#"github.com/leanote/leanote/cmd/harness"#' app/cmd/main.go
-# 生成器用构建机原生架构编译，再由它为目标架构生成 app/tmp 并编译
-RUN go build -o /usr/local/bin/leanote-gen github.com/leanote/leanote/app/cmd
+RUN git clone --depth 1 --branch ${LEANOTE_VERSION} https://github.com/fichenx/leanote.git /src
+WORKDIR /src
+RUN go mod download
+# 该分支的 app/cmd 只生成 app/tmp/main.go、app/tmp/run/run.go、app/routes/routes.go
+RUN cd app/cmd && go build -o /usr/local/bin/leanote-gen . && leanote-gen build -v ../../ ./tmptmp && rm -rf ./tmptmp
 RUN mkdir -p /out && \
-    GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT#v} leanote-gen && \
-    cp /go/bin/revel.d/github.com/leanote/leanote/leanote /out/leanote
+    GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT#v} \
+    go build -trimpath -ldflags "-s -w" -o /out/leanote ./app/tmp
 
 # ---------- 运行镜像 ----------
 FROM mongo:4.2.7-bionic
@@ -47,11 +46,11 @@ RUN set -eux; \
 
 # 程序与静态资源模板，首次启动时复制到 /data/leanote
 COPY --from=builder /out/leanote /opt/leanote/bin/leanote
-COPY --from=builder /go/src/github.com/leanote/leanote/app/views /opt/leanote/app/views
-COPY --from=builder /go/src/github.com/leanote/leanote/public /opt/leanote/public
-COPY --from=builder /go/src/github.com/leanote/leanote/conf /opt/leanote/conf
-COPY --from=builder /go/src/github.com/leanote/leanote/messages /opt/leanote/messages
-COPY --from=builder /go/src/github.com/leanote/leanote/mongodb_backup /opt/leanote/mongodb_backup
+COPY --from=builder /src/app/views /opt/leanote/app/views
+COPY --from=builder /src/public /opt/leanote/public
+COPY --from=builder /src/conf /opt/leanote/conf
+COPY --from=builder /src/messages /opt/leanote/messages
+COPY --from=builder /src/mongodb_backup /opt/leanote/mongodb_backup
 COPY run.sh start.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/run.sh /usr/local/bin/start.sh
 

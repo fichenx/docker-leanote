@@ -12,7 +12,7 @@
 
 - [English](./README-EN.md)
 
-镜像提供三个变体，由 GitHub Actions 使用 buildx 构建多架构 manifest：`linux/amd64`、`linux/arm64`，`lite` 额外支持 `linux/arm/v7`。Leanote 2.6.1 在构建阶段用 Go 1.15 交叉编译，ARM 上不依赖 QEMU 模拟。
+镜像提供三个变体，由 GitHub Actions 使用 buildx 构建多架构 manifest：`linux/amd64`、`linux/arm64`，`lite` 额外支持 `linux/arm/v7`。源码取自安全加固后的分支 `fichenx/leanote` 的 `2.6.1-hardened` tag（默认密钥校验、Cookie 加固、导出 PDF 签名校验、API 越权修复等），构建阶段用 Go 1.15 交叉编译，ARM 上不依赖 QEMU 模拟。
 
 **注意：本仓库的镜像名是 `fichenx/leanote`，不是 axboy/leanote。**
 
