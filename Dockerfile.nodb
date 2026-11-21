@@ -1,0 +1,53 @@
+# syntax=docker/dockerfile:1
+# nodb: 完整功能，不包含数据库（PDF 导出与数据库备份需要外接 MongoDB + mongodump）
+# 支持 linux/amd64、linux/arm64、linux/arm/v7
+
+FROM --platform=$BUILDPLATFORM golang:1.15-buster AS builder
+ARG TARGETOS
+ARG TARGETARCH
+ARG TARGETVARIANT
+ARG LEANOTE_VERSION=2.6.1
+ENV GO111MODULE=off \
+    CGO_ENABLED=0 \
+    GOPATH=/go
+
+RUN git clone --depth 1 --branch ${LEANOTE_VERSION} https://github.com/leanote/leanote.git /go/src/github.com/leanote/leanote
+WORKDIR /go/src/github.com/leanote/leanote
+RUN sed -i 's#"github.com/revel/cmd/harness"#"github.com/leanote/leanote/cmd/harness"#' app/cmd/main.go
+RUN go build -o /usr/local/bin/leanote-gen github.com/leanote/leanote/app/cmd
+RUN mkdir -p /out && \
+    GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT#v} leanote-gen && \
+    cp /go/bin/revel.d/github.com/leanote/leanote/leanote /out/leanote
+
+FROM mongo:4.2.7-bionic
+
+ARG LEANOTE_VERSION=2.6.1
+ENV TZ=Asia/Shanghai \
+    QT_QPA_PLATFORM=offscreen \
+    LEANOTE_VERSION=${LEANOTE_VERSION}
+
+# 保留 mongo 镜像里的 mongodump/mongorestore/mongo 客户端，用于备份/恢复
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        ca-certificates wget tzdata \
+        wkhtmltopdf xvfb \
+        fonts-wqy-zenhei fonts-wqy-microhei; \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime; \
+    echo $TZ > /etc/timezone; \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /out/leanote /opt/leanote/bin/leanote
+COPY --from=builder /go/src/github.com/leanote/leanote/app/views /opt/leanote/app/views
+COPY --from=builder /go/src/github.com/leanote/leanote/public /opt/leanote/public
+COPY --from=builder /go/src/github.com/leanote/leanote/conf /opt/leanote/conf
+COPY --from=builder /go/src/github.com/leanote/leanote/messages /opt/leanote/messages
+COPY start.sh /usr/local/bin/start.sh
+COPY run-nodb.sh /usr/local/bin/run.sh
+RUN chmod +x /usr/local/bin/run.sh /usr/local/bin/start.sh
+
+EXPOSE 9000
+VOLUME ["/data/leanote"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD wget -q -O /dev/null --timeout=5 http://127.0.0.1:9000/login || exit 1
+CMD ["/usr/local/bin/run.sh"]
