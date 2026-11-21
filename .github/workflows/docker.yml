@@ -59,7 +59,6 @@ jobs:
           tags: |
             type=raw,value=${{ matrix.variant.name }}
             type=raw,value=2.6.1-${{ matrix.variant.name }}
-            type=raw,value=latest,enable=${{ matrix.variant.name == 'full' }}
 
       - name: Build and push
         uses: docker/build-push-action@v5
