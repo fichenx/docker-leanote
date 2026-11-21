@@ -18,13 +18,14 @@
 
 ## 版本与标签
 
-- 稳定版：保持上游 `leanote/leanote` 2.6.1 原样，标签 `<变体>`、`2.6.1-<变体>`，`latest` 指向 full。
-- 修复版：跟随 GitHub Release 版本号打标签，源码取自 `fichenx/leanote` 同名 tag（默认密钥校验、Cookie 加固、导出 PDF 签名校验、API 越权修复、文档导航修复等）。
+- 稳定版：保持上游 `leanote/leanote` 2.6.1 原样，标签 `<变体>`、`2.6.1-<变体>`。
+- 修复版：跟随 GitHub Release 版本号打标签，源码取自 `fichenx/leanote` 同名 tag（默认密钥校验、Cookie 加固、导出 PDF 签名校验、API 越权修复、文档导航修复等）。从下一个版本起直接使用版本号，不再带 `hardened` 后缀。
+- `latest` 指向修复版 `2.6.1-hardened-nodb`。
 
 | 变体 | 稳定版标签 | 修复版标签（以 2.6.1-hardened 为例） |
 | --- | --- | --- |
-| full | `full`、`latest`、`2.6.1-full` | `2.6.1-hardened`、`2.6.1-hardened-full` |
-| nodb | `nodb`、`2.6.1-nodb` | `2.6.1-hardened-nodb` |
+| full | `full`、`2.6.1-full` | `2.6.1-hardened`、`2.6.1-hardened-full` |
+| nodb | `nodb`、`2.6.1-nodb` | `2.6.1-hardened-nodb`、`latest` |
 | lite | `lite`、`2.6.1-lite` | `2.6.1-hardened-lite` |
 
 | 变体 | 数据库 | PDF 导出 | 数据库备份 | 架构 |
