@@ -20,7 +20,7 @@ RUN mkdir -p /out && \
     GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT#v} leanote-gen && \
     cp /go/bin/revel.d/github.com/leanote/leanote/leanote /out/leanote
 
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 ARG LEANOTE_VERSION=2.6.1
 ENV TZ=Asia/Shanghai \

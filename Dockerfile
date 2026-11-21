@@ -33,7 +33,9 @@ ENV TZ=Asia/Shanghai \
     QT_QPA_PLATFORM=offscreen \
     LEANOTE_VERSION=${LEANOTE_VERSION}
 
+# mongo 镜像内置的 4.2 apt 源签名密钥已过期，且镜像里已装好 mongod，直接移除该源
 RUN set -eux; \
+    rm -f /etc/apt/sources.list.d/mongodb-org-*.list; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
         ca-certificates wget tzdata \

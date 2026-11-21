@@ -12,7 +12,7 @@
 
 - [English](./README-EN.md)
 
-镜像提供三个变体，由 GitHub Actions 使用 buildx 构建多架构 manifest：`linux/amd64`、`linux/arm64`，`nodb`/`lite` 额外支持 `linux/arm/v7`。Leanote 2.6.1 在构建阶段用 Go 1.15 交叉编译，ARM 上不依赖 QEMU 模拟。
+镜像提供三个变体，由 GitHub Actions 使用 buildx 构建多架构 manifest：`linux/amd64`、`linux/arm64`，`lite` 额外支持 `linux/arm/v7`。Leanote 2.6.1 在构建阶段用 Go 1.15 交叉编译，ARM 上不依赖 QEMU 模拟。
 
 **注意：本仓库的镜像名是 `fichenx/leanote`，不是 axboy/leanote。**
 
@@ -25,7 +25,7 @@
 | 变体 | 数据库 | PDF 导出 | 数据库备份 | 架构 |
 | --- | --- | --- | --- | --- |
 | full | 内置 MongoDB 4.2 | ✅ | ✅ | amd64 / arm64 |
-| nodb | 需外接 | ✅ | ✅（需能连到 mongodump 可用环境） | amd64 / arm64 / armv7 |
+| nodb | 需外接 | ✅ | ✅（需能连到 mongodump 可用环境） | amd64 / arm64 |
 | lite | 需外接 | ❌ | ❌ | amd64 / arm64 / armv7 |
 
 ## 快速开始

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # nodb: 完整功能，不包含数据库（PDF 导出与数据库备份需要外接 MongoDB + mongodump）
-# 支持 linux/amd64、linux/arm64、linux/arm/v7
+# 支持 linux/amd64、linux/arm64（MongoDB 4.2 官方镜像没有 armv7 版本）
 
 FROM --platform=$BUILDPLATFORM golang:1.15-buster AS builder
 ARG TARGETOS
@@ -27,7 +27,9 @@ ENV TZ=Asia/Shanghai \
     LEANOTE_VERSION=${LEANOTE_VERSION}
 
 # 保留 mongo 镜像里的 mongodump/mongorestore/mongo 客户端，用于备份/恢复
+# 内置的 4.2 apt 源签名密钥已过期，客户端工具已随镜像提供，移除该源
 RUN set -eux; \
+    rm -f /etc/apt/sources.list.d/mongodb-org-*.list; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
         ca-certificates wget tzdata \
