@@ -29,7 +29,7 @@ ENV TZ=Asia/Shanghai \
 # 保留 mongo 镜像里的 mongodump/mongorestore/mongo 客户端，用于备份/恢复
 # 内置的 4.2 apt 源签名密钥已过期，客户端工具已随镜像提供，移除该源
 RUN set -eux; \
-    rm -f /etc/apt/sources.list.d/mongodb-org-*.list; \
+    sed -i '/repo.mongodb.org/d' /etc/apt/sources.list /etc/apt/sources.list.d/*.list || true; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
         ca-certificates wget tzdata \
