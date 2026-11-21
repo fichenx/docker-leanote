@@ -11,6 +11,8 @@ if [ ! -f /data/leanote/conf/app.conf ]; then
     echo "请把 /data/leanote/conf/app.conf 里的 db.host 改成你的 MongoDB 地址"
 fi
 
+# conf/routes 每次都要同步，缺失会导致 Revel 路由初始化失败、进程反复重启
+cp -f /opt/leanote/conf/routes /data/leanote/conf/routes
 cp -f /opt/leanote/bin/leanote /data/leanote/bin/leanote
 cp -rf /opt/leanote/app/views /data/leanote/app/
 cp -rf /opt/leanote/messages /data/leanote/

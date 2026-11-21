@@ -38,6 +38,8 @@ if [ ! -f /data/leanote/conf/app.conf ]; then
 fi
 
 # 程序与静态资源跟随镜像更新，用户配置与上传文件保留
+# conf/routes 每次都要同步，缺失会导致 Revel 路由初始化失败、进程反复重启
+cp -f /opt/leanote/conf/routes /data/leanote/conf/routes
 cp -f /opt/leanote/bin/leanote /data/leanote/bin/leanote
 cp -rf /opt/leanote/app/views /data/leanote/app/
 cp -rf /opt/leanote/messages /data/leanote/
