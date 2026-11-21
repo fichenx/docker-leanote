@@ -19,6 +19,10 @@ RUN cd app/cmd && go build -o /usr/local/bin/leanote-gen . && leanote-gen build 
 RUN mkdir -p /out && \
     GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT#v} \
     go build -trimpath -ldflags "-s -w" -o /out/leanote ./app/tmp
+# Revel 运行时要读框架源码里的 conf/mime-types.conf 与 templates
+RUN mkdir -p /out/gopath/src/github.com/revel && \
+    cp -r /go/pkg/mod/github.com/revel/revel@v1.0.0 /out/gopath/src/github.com/revel/revel && \
+    chmod -R u+rwX,go+rX /out/gopath
 
 FROM mongo:4.2.7-bionic
 
@@ -45,6 +49,9 @@ COPY --from=builder /src/app/views /opt/leanote/app/views
 COPY --from=builder /src/public /opt/leanote/public
 COPY --from=builder /src/conf /opt/leanote/conf
 COPY --from=builder /src/messages /opt/leanote/messages
+COPY --from=builder /out/gopath /opt/gopath
+RUN mkdir -p /opt/gopath/src/github.com/leanote && \
+    ln -s /data/leanote /opt/gopath/src/github.com/leanote/leanote
 COPY start.sh /usr/local/bin/start.sh
 COPY run-nodb.sh /usr/local/bin/run.sh
 RUN chmod +x /usr/local/bin/run.sh /usr/local/bin/start.sh

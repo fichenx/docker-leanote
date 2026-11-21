@@ -23,6 +23,11 @@ RUN cd app/cmd && go build -o /usr/local/bin/leanote-gen . && leanote-gen build 
 RUN mkdir -p /out && \
     GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT#v} \
     go build -trimpath -ldflags "-s -w" -o /out/leanote ./app/tmp
+# Revel 运行时要读框架源码里的 conf/mime-types.conf 与 templates，
+# 否则启动报 cannot find package "github.com/revel/revel"
+RUN mkdir -p /out/gopath/src/github.com/revel && \
+    cp -r /go/pkg/mod/github.com/revel/revel@v1.0.0 /out/gopath/src/github.com/revel/revel && \
+    chmod -R u+rwX,go+rX /out/gopath
 
 # ---------- 运行镜像 ----------
 FROM mongo:4.2.7-bionic
@@ -51,6 +56,10 @@ COPY --from=builder /src/public /opt/leanote/public
 COPY --from=builder /src/conf /opt/leanote/conf
 COPY --from=builder /src/messages /opt/leanote/messages
 COPY --from=builder /src/mongodb_backup /opt/leanote/mongodb_backup
+# Revel 打包布局：框架源码 + 指向数据目录的应用软链
+COPY --from=builder /out/gopath /opt/gopath
+RUN mkdir -p /opt/gopath/src/github.com/leanote && \
+    ln -s /data/leanote /opt/gopath/src/github.com/leanote/leanote
 COPY run.sh start.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/run.sh /usr/local/bin/start.sh
 
