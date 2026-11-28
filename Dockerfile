@@ -8,7 +8,7 @@ FROM --platform=$BUILDPLATFORM golang:1.15-buster AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG TARGETVARIANT
-ARG LEANOTE_VERSION=2.6.1-hardened
+ARG LEANOTE_VERSION=2.6.2-hardened
 # 使用修复后的分支（安全加固），模块模式构建
 ENV GO111MODULE=on \
     GOFLAGS=-mod=mod \
@@ -32,7 +32,7 @@ RUN mkdir -p /out/gopath/src/github.com/revel && \
 # ---------- 运行镜像 ----------
 FROM mongo:4.2.7-bionic
 
-ARG LEANOTE_VERSION=2.6.1
+ARG LEANOTE_VERSION=2.6.2-hardened
 ENV TZ=Asia/Shanghai \
     QT_QPA_PLATFORM=offscreen \
     LEANOTE_VERSION=${LEANOTE_VERSION}

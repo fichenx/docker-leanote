@@ -9,9 +9,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: '跟随 leanote Release 的版本号（如 2.6.1-hardened）'
+        description: '跟随 leanote Release 的版本号（如 2.6.2-hardened）'
         required: false
-        default: '2.6.1-hardened'
+        default: '2.6.2-hardened'
 
 permissions:
   contents: read
@@ -19,7 +19,7 @@ permissions:
 env:
   IMAGE: fichenx/leanote
   # 版本号跟随 GitHub Release；手动触发时可覆盖
-  LEANOTE_VERSION: ${{ github.event.inputs.version || '2.6.1-hardened' }}
+  LEANOTE_VERSION: ${{ github.event.inputs.version || '2.6.2-hardened' }}
 
 jobs:
   build:
